@@ -1,5 +1,3 @@
-import json
-import config
 import social_media_datastore.service as ds
 from worker_services.content_processing_service_client import ContentProcessingServiceClient
        

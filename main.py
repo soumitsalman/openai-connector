@@ -1,12 +1,16 @@
+import config
 import worker_services.service_definitions as filterservice
+import slack_interface.slack_client as slackbot
 
-services = [
-    filterservice.create_text_filtering_client("soumitsr@gmail.com"),
-    filterservice.create_hot_filtering_client()
-]
+slackbot.start()
 
-for s in services:
-    s.run()
+# services = [
+#     filterservice.create_text_filtering_client("soumitsr@gmail.com"),
+#     filterservice.create_hot_filtering_client()
+# ]
+
+# for s in services:
+#     s.run()
 
 
 # import asyncio
