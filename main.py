@@ -1,16 +1,37 @@
 import config
 import worker_services.service_definitions as filterservice
 import slack_interface.slack_client as slackbot
+import social_media_datastore.dataservice as ds
+
+
+# ds.update_contents_to_store([
+#     {"id": "t5_2u559", "kind": "subreddit", "summary": "SR random summary", "topic": "SR  topic", "text": "SOUMIT'S RANDOM CRAP"},
+#     {"id": "t3_182y2qf", "kind": "post", "summary": "POST random summary 1", "topic": "POST random topic 1"}
+# ])
 
 slackbot.start()
 
+# workflow:
+# process new items --> look for hot items and then put them in hot items queue
+# process hot items --> look for interesting items and them put them in the interesting items queue & content-aug queue
+# process interesting items --> slack app will take it
+# process content aug items --> update content store
+# NEW Items --(engagement filter)--> HOT Items --(interest filter)--> INTERESTING Items -----------------------------------> Slack app/UI
+#                                                           |-------> CONTENT AUG Items --(summary generator)--> Content Store --|        
+
+
+
+
 # services = [
-#     filterservice.create_text_filtering_client("soumitsr@gmail.com"),
-#     filterservice.create_hot_filtering_client()
+#     filterservice.create_engagement_filtering_client(),
+#     filterservice.create_interest_filtering_client("soumitsr@gmail.com"),
+#     filterservice.create_summary_generation_client()
 # ]
 
+# run each service for 10 rounds
 # for s in services:
-#     s.run()
+#     for i in range(10):
+#         s.run()
 
 
 # import asyncio

@@ -45,7 +45,6 @@ class BasicClient:
         results = self.openai_client.chat.completions.create(
             model = self.model,
             messages = self.thread,
-            # tools = self.functions,
             temperature = 0.4,
             seed = 10000 #random number to keep the response consistent
         )

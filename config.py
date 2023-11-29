@@ -29,11 +29,14 @@ def get_az_servicebus_connection() -> str:
 def get_new_items_queue() -> str:
     return _config["datastore"]["endpoint"]["NEW_ITEMS_QUEUE"]
 
+def get_hot_items_queue() -> str:
+    return _config["datastore"]["endpoint"]["HOT_ITEMS_QUEUE"]
+
+def get_content_aug_queue() -> str:
+    return _config["datastore"]["endpoint"]["CONTENT_AUG_QUEUE"]
+
 def get_interesting_items_queue() -> str:
     return _config["datastore"]["endpoint"]["INTERESTING_ITEMS_QUEUE"]
-
-def get_shortlisted_items_queue() -> str:
-    return _config["datastore"]["endpoint"]["SHORTLISTED_ITEMS_QUEUE"]
 
 def get_az_cosmosdb_connection() -> str:
     return _config["datastore"]["endpoint"]["AZ_COSMOSDB_CONNECTION"]
