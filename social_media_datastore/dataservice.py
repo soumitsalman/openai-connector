@@ -12,12 +12,23 @@ servicebus_client = None
 
 ALL_USERS = "*"
 
+# different actions you can take on a media item
+class UserActionType(Enum):    
+    SUBSCRIBE = "sub"
+    UNSUBSCRIBE = "unsub"
+    COMMENT = "comment"
+    LIKE = "upvote"
+    DISLIKE = "downvote"
+    TRASH = "trash"
+
+# what are the define media content sources
 class ContentSource(Enum):
     REDDIT = "www.reddit.com"
 
+# what are the difference processing stages
 class ProcessingStage(Enum):
     NEW          = "new"    
-    HOT = "short_listed"
+    HOT = "hot"
     CONTENT_AUG = "content_aug"
     INTERESTING  = "interesting"
     _USER_ACTION  = "3_action_suggested"

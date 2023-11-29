@@ -1,8 +1,26 @@
 import datetime
+import json
+import re
 import config
 import social_media_datastore.dataservice as ds
+import slack_interface._display_block_definitions as blocks
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+
+"""
+LESSONS LEARNED:
+Essentially what matters to me is "app.message" app.action and app.command
+For app.message the message parameter matters
+For app.action the payload/action parameter matters. payload and action are same here
+    I should assign a blockID = id of the content because that is unique identifier
+    Value shows what the actions is (save, comment, subscribe, trash)
+    I can use say or respond for sending what I want
+For app.command make sure that I dont have too many commands
+    I can simply handle them as functions
+message and body has user id information
+respond will only respond to the person that initiated it. The original message will disappear once I respond
+Say will share this everyone and the original message will not disappear
+"""
 
 app = App(token=config.get_slack_bot_token())
 
@@ -10,145 +28,40 @@ def start():
     SocketModeHandler(app, config.get_slack_app_token()).start()
 
 @app.command("/newitems")
-def show_new_posts(ack, respond):
+def show_new_posts(ack, say, command):
     # pass the kind value as a parameter
     ack()
-    _get_items_and_display(ds.ProcessingStage.INTERESTING, "soumitsr@gmail.com", respond)
+    if command['user_id'] != "U0G95QKJ6":
+        say(f"Well ... you ain't <@U0G95QKJ6> but i'll show you his shit anyway, cause fuck em!")
+    else:
+        say("Here is a list of top selection")
+    _get_items_and_display(ds.ProcessingStage.INTERESTING, "soumitsr@gmail.com", say)
 
-
-@app.action("interesting_items_action")
-def act_on_interesting_items(ack, payload):
+@app.action("item_action_start")
+def start_user_action(ack, action, body, say):
     ack()
-    print(payload.get("value"))
+    say(f"<@{body['user']['id']}> wants to {action['selected_option']['value']} to {action['block_id']}")
 
-
-def _get_items_and_display(where, who, respond):
+def _get_items_and_display(where, who, say):
     items = [sr for sr in ds.get_contents_for_processing(where, who, max_items=5)]
-    respond(blocks=_get_item_displayblock(items_metadata=items))
+    say(blocks=blocks.get_items_displayblocks(items_metadata=items))
+
+@app.message("buttons")
+def _TEST_show_buttons(say, message):
+
+    say(text = "showing a butt load of buttons", blocks=blocks._TEST_get_random_buttons())
+    print(json.dumps([message]), ",\n")
+
+
+@app.action(re.compile("(actionId-0|button-action|overflow-action|static_select-action|users_select-action)"))
+def _TEST_random_action_function(ack, payload, action, body, message, say):
+    ack()
+    say("Wah gwaan man!")    
+    print(json.dumps([payload, action, body]),",\n")
     
-def _get_item_displayblock(items_metadata: [dict]):
-    date_str = lambda float_val: datetime.datetime.fromtimestamp(float_val).strftime("%b %d, %Y") 
-    post_and_comment_context = lambda data: {
-        "type": "context",
-        "elements": [
-            {
-                "type": "plain_text",
-                "text": f":basketball: {data.get('score', 0)}"
-            },
-            {
-                "type": "plain_text",
-                "text": f":ok_hand: {data.get('upvote_ratio', 0)*100}%"
-            },
-            {
-                "type": "plain_text",
-                "text": f":left_speech_bubble: {data.get('num_comments', 0)}"
-            },                               
-            {
-                "type": "plain_text",
-                # TODO: pull-in from data after it is ready
-                "text": f":card_index_dividers: {data.get('topic', 'misc.')}"
-            },
-            {
-                "type": "plain_text",
-                "text": f":date: {date_str(data.get('created'))}"
-            }
-        ]
-    }
-    channel_context = lambda data: {
-        "type": "context",
-        "elements": [
-            {
-                "type": "plain_text",
-                "text": f":busts_in_silhouette: {data.get('num_subscribers', 0)}"
-            },
-            {
-                "type": "plain_text",
-                "text": f":card_index_dividers: {data.get('topic', 'misc.')}"
-            }
-        ]
-    }
-    post_and_comment_section = lambda data: {
-		"type": "section",
-		"text": {
-			"type": "mrkdwn",
-			"text": f"[<{data.get('url')}|r/{data.get('channel')}>] *{data.get('title', '')}*\n{data.get('text')}\n{data.get('summary')}"
-		},
-		"accessory": {
-			"type": "overflow",
-			"options": [
-				{
-					"text": {
-						"type": "plain_text",
-						"text": ":left_speech_bubble: Comment",
-                        "emoji": True
-					},
-					"value": f"comment {data['id']}"
-				},
-				{
-					"text": {
-						"type": "plain_text",
-						"text": ":file_folder: Save for later",
-                        "emoji": True
-					},
-					"value": f"save {data['id']}"
-				},
-				{
-					"text": {
-						"type": "plain_text",
-						"text": ":roll_of_paper: Trash",
-                        "emoji": True
-					},
-					"value": f"trash {data['id']}"
-				}
-			],
-			"action_id": "interesting_items_action"
-		}
-	}
-    channel_section = lambda data: {
-		"type": "section",
-		"text": {
-			"type": "mrkdwn",
-			"text": f"[<{data.get('url')}|r/{data.get('channel')}>] *{data.get('title')}*\n*Summary*: {data.get('summary')}\n*Description*: {data.get('text')}"
-		},
-		"accessory": {
-			"type": "overflow",
-			"options": [
-				{
-					"text": {
-						"type": "plain_text",
-						"text": ":left_speech_bubble: Subscribe",
-                        "emoji": True
-					},
-					"value": f"subscribe {data['id']}"
-				},				
-				{
-					"text": {
-						"type": "plain_text",
-						"text": ":roll_of_paper: Trash",
-                        "emoji": True
-					},
-					"value": f"trash {data['id']}"
-				}
-			],
-			"action_id": "interesting_items_action"
-		}
-	}
-    divider = {"type": "divider"}
-    blocks = []
-    for metadata in items_metadata:
-        print(metadata)
-        if metadata["kind"] == "subreddit":
-            new_set = [
-                channel_context(metadata),
-                channel_section(metadata),
-                divider
-            ]
-        else:
-            new_set = [
-                post_and_comment_context(metadata),
-                post_and_comment_section(metadata),
-                divider
-            ]
-        blocks = blocks + new_set
-    return blocks
+
+
+
+
+    
 
