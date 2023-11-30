@@ -31,45 +31,9 @@ class ProcessingStage(Enum):
     HOT = "hot"
     CONTENT_AUG = "content_aug"
     INTERESTING  = "interesting"
-    _USER_ACTION  = "3_action_suggested"
+    USER_ACTION  = "user_action_scheduled"
     _ACTION_TAKEN = "4_action_taken"
     _IGNORE       = "9_ignore"
-
-# TODO: deprecate. this isn't really needed. dictory works better
-# class SocialMediaContent:
-#     def __init__(self,
-#                  id=None, url_id=None, title=None, kind=None,                
-#                  channel=None, parent_id=None,                
-#                  text=None, url=None,                
-#                  category=None, author=None,
-#                  created=None, score=None, num_comments=None, num_subscribers=None, upvote_ratio=None,   
-#                  # this is to satisfy everything else that may come in the dictionary that I dont care about            
-#                  **kwargs):
-#         self.id = id
-#         self.url_id = url_id
-#         self.title = title
-#         self.kind = kind
-
-#         self.channel = channel
-#         self.parent_id = parent_id
-
-#         self.text = text
-#         self.url = url
-
-#         self.category = category
-#         self.author = author
-#         self.created = created
-#         self.score = score
-#         self.num_comments = num_comments
-#         self.num_subscribers = num_subscribers
-#         self.upvote_ratio = upvote_ratio
-
-#     def __str__(self) -> str:
-#         # TODO: improve this later. currently this is for debug purpose only
-#         return f"id: {self.id} | channel: {self.channel} | category: {self.category} | comms: {self.num_comments} | subs: {self.num_subscribers}"
-
-#     def from_dict(vals: dict):
-#         return SocialMediaContent(**vals)
 
 def __init__():
     cosmos_client = CosmosClient.from_connection_string(config.get_az_cosmosdb_connection())
@@ -82,6 +46,10 @@ def __init__():
     user_metadata_container = db.get_container_client(config.get_user_metadata_container())
     global servicebus_client
     servicebus_client = ServiceBusClient.from_connection_string(conn_str = config.get_az_servicebus_connection(), logging_enable=True)
+
+# this should be used internally
+def _get_user_id(user_id:str) -> str:
+    return "soumitsr@gmail.com"
 
 def get_user_interests(user_id: str) -> list[str]:
     query = "SELECT c.interests FROM c WHERE c.user_id = @user_id"
@@ -96,7 +64,7 @@ def get_user_interests(user_id: str) -> list[str]:
         return res[0]
 
 # returns max_batch_size number of contents or less. If you need to empty the queue, keep calling this
-def get_contents_for_processing(stage: ProcessingStage, user_id: str, fields: [str] = None, max_items: int = config.get_max_batch_size()) -> list:
+def get_contents_for_processing(stage: ProcessingStage, user_id: str, fields: [str] = None, max_items: int = config.get_max_datastore_batch_size()) -> list:
     #get the items from the queue
     items_in_queue = deque_content_ids(stage=stage, user_id=user_id, max_items = max_items)   
     return get_contents_from_store(items_in_queue, fields=fields)    
@@ -132,10 +100,20 @@ def que_content_ids(stage: ProcessingStage, user_id: str, source: ContentSource,
     # TODO: remove this
     print(f"[DEBUG MSG] {len(content_ids)} items QUEued for {user_id} in {stage.value} items")
 
-def deque_content_ids(stage: ProcessingStage, user_id: str, max_items = config.get_max_batch_size()) -> list[str]:
+def que_user_action(action: dict):
+    que_msg = lambda x: ServiceBusMessage(json.dumps(action))
+    msgs = [que_msg(action)]
+    queue = _select_queue(ProcessingStage.USER_ACTION, "write")
+    with queue:
+        queue.send_messages(msgs)
+    # TODO: remove this
+    print(f"[DEBUG MSG] User Action queue [{action['user_id']}: {action['action']} --> {action['content_id']}]") 
+
+
+def deque_content_ids(stage: ProcessingStage, user_id: str, max_items = config.get_max_datastore_batch_size()) -> list[str]:
     queue = _select_queue(stage, read_write="read")
     with queue:
-        received = queue.receive_messages(max_message_count=max_items, max_wait_time=config.get_max_wait_time())
+        received = queue.receive_messages(max_message_count=max_items, max_wait_time=config.get_max_datastore_wait_time())
         to_dict = lambda x: json.loads(str(x))
         # user_id == "*" means that this is applicable to all users or it doesnt matter who the user is
         # so either the query wants data about any user item OR data available is for every user OR query matches the user id in the queue
@@ -166,6 +144,10 @@ def _select_queue(stage: ProcessingStage, read_write: str):
         return servicebus_client.get_queue_receiver(config.get_content_aug_queue())
     elif stage == ProcessingStage.CONTENT_AUG and read_write == "write":
         return servicebus_client.get_queue_sender(config.get_content_aug_queue())
+    elif stage == ProcessingStage.USER_ACTION and read_write == "read":
+        return servicebus_client.get_queue_receiver(config.get_user_action_queue())
+    elif stage == ProcessingStage.USER_ACTION and read_write == "write":
+        return servicebus_client.get_queue_sender(config.get_user_action_queue())
     else:
         # TODO: remove the print. this is for debugging only 
         # this should ideally never happen

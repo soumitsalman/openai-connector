@@ -32,7 +32,7 @@ class BasicClient:
         if isinstance(msg, dict):
             exceed_context_window = lambda msg: (
                 self._count_tokens_in_thread()
-                + tok.count_tokens(msg["content"], self.model)) >= config.get_context_window()
+                + tok.count_tokens(msg["content"], self.model)) >= config.get_openai_chat_context_window()
             if (msg["role"] == "user") and exceed_context_window(msg):
                 # print("[DEBUG MSG] Resetting context window for: ", msg)
                 self._reset_window()
@@ -82,7 +82,7 @@ def _create_batches(model: str, items: list[str]):
     # only process if the current message size <= max_msg_tokens
     # if a message is larger than the max token length then it wont fit by itself anyway
     # another option is to split it in half?
-    items = [msg for msg in items if tok.count_tokens(content=msg, model=model) <= config.get_max_msg_tokens()]
+    items = [msg for msg in items if tok.count_tokens(content=msg, model=model) <= config.get_openai_max_msg_tokens()]
     token_counts = [tok.count_tokens(content=msg, model=model) for msg in items]
 
     cursor = 0
@@ -91,6 +91,6 @@ def _create_batches(model: str, items: list[str]):
         cur_tcount = reduce(add_int, token_counts[cursor:i+1])
         # print("[DEBUG MSG] cursor=%d | i=%d | cur_tcount=%d" % (cursor, i+1, cur_tcount))
         # if adding the current item exceeds the max_msg_token OR we are at the last item anyway then package and send
-        if cur_tcount > config.get_max_msg_tokens() or (i == len(token_counts)-1):            
+        if cur_tcount > config.get_openai_max_msg_tokens() or (i == len(token_counts)-1):            
             yield "\n\n".join(items[cursor:i+1]) 
             cursor = i+1

@@ -4,3 +4,4 @@ openai_interface/assistantclient.py
 openai_interface/contentfilter.py
 output_6.txt
 output_slack_action.json
+slack_app_permission_scopes.tsv

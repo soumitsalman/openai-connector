@@ -17,11 +17,11 @@ def get_assistant_model() -> str:
 def get_embeddings_model() -> str:
     return _config["openai"]["EMBEDDINGS_MODEL"]
 
-def get_max_msg_tokens() -> int:
-    return _config["openai"]["MAX_MSG_TOKENS"]
+def get_openai_max_msg_tokens() -> int:
+    return _config["openai"]["MAX_TOKENS_PER_MSG"]
 
-def get_context_window() -> int:
-    return _config["openai"]["MAX_CONTEXT_WINDOW"]
+def get_openai_chat_context_window() -> int:
+    return _config["openai"]["MAX_CHAT_CONTENT_WINDOW"]
 
 def get_az_servicebus_connection() -> str:
     return _config["datastore"]["endpoint"]["AZ_SERVICE_BUS_CONNECTION"]
@@ -38,6 +38,9 @@ def get_content_aug_queue() -> str:
 def get_interesting_items_queue() -> str:
     return _config["datastore"]["endpoint"]["INTERESTING_ITEMS_QUEUE"]
 
+def get_user_action_queue() -> str:
+    return _config["datastore"]["endpoint"]["USER_ACTION_QUEUE"]
+
 def get_az_cosmosdb_connection() -> str:
     return _config["datastore"]["endpoint"]["AZ_COSMOSDB_CONNECTION"]
 
@@ -53,10 +56,10 @@ def get_user_metadata_container() -> str:
 def get_user_action_container() -> str:
     return _config["datastore"]["endpoint"]["USER_ACTION_CONTAINER"]
 
-def get_max_wait_time() -> int:
+def get_max_datastore_wait_time() -> int:
     return _config["datastore"]["runtime"]["MAX_WAIT_TIME"]
 
-def get_max_batch_size() -> int:
+def get_max_datastore_batch_size() -> int:
     return _config["datastore"]["runtime"]["MAX_BATCH_SIZE"]
 
 def get_slack_bot_token() -> int:
@@ -64,3 +67,6 @@ def get_slack_bot_token() -> int:
 
 def get_slack_app_token() -> int:
     return _config["slack"]["SLACK_BOT_APP_LEVEL_TOKEN"]
+
+def get_max_slack_items_to_show() -> int:
+    return _config["slack"]["MAX_ITEMS_TO_SHOW"]

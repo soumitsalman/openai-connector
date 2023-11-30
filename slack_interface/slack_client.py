@@ -28,25 +28,41 @@ def start():
     SocketModeHandler(app, config.get_slack_app_token()).start()
 
 @app.command("/newitems")
-def show_new_posts(ack, say, command):
+def show_new_items(ack, respond, command):
     # pass the kind value as a parameter
     ack()
-    if command['user_id'] != "U0G95QKJ6":
-        say(f"Well ... you ain't <@U0G95QKJ6> but i'll show you his shit anyway, cause fuck em!")
-    else:
-        say("Here is a list of top selection")
-    _get_items_and_display(ds.ProcessingStage.INTERESTING, "soumitsr@gmail.com", say)
+    user_id = ds._get_user_id(command['user_id'])
+    _get_items_and_display(from_where=ds.ProcessingStage.INTERESTING, for_who=user_id, to_where=respond)
 
 @app.action("item_action_start")
-def start_user_action(ack, action, body, say):
+def start_user_action(ack, action, body, respond):
     ack()
-    say(f"<@{body['user']['id']}> wants to {action['selected_option']['value']} to {action['block_id']}")
+    user_id = ds._get_user_id(body['user']['id'])
+    media_action = action['selected_option']['value']
+    content_id = action['block_id']
+    if media_action == "trash":
+       respond(f"{blocks.get_system_message('trashed')} [<@{body['user']['id']}>: {action['selected_option']['value']} --> {action['block_id']}]") 
+    elif media_action == "sub":
+        ds.que_user_action(
+            {
+                "user_id": user_id, 
+                # TODO: change this to later
+                "source": ds.ContentSource.REDDIT.value, 
+                "content_id": content_id,
+                "action": media_action
+            }
+        )
+        respond(f"{blocks.get_system_message('scheduled')} [<@{body['user']['id']}>: {action['selected_option']['value']} --> {action['block_id']}]")
+    else:
+        respond(f"{blocks.get_system_message('error')} [<@{body['user']['id']}>: {action['selected_option']['value']} --> {action['block_id']}]")
 
-def _get_items_and_display(where, who, say):
-    items = [sr for sr in ds.get_contents_for_processing(where, who, max_items=5)]
-    say(blocks=blocks.get_items_displayblocks(items_metadata=items))
+def _get_items_and_display(from_where, for_who, to_where):
+    # change the max_items configuration
+    items = [sr for sr in ds.get_contents_for_processing(from_where, for_who, max_items=config.get_max_slack_items_to_show())]
+    to_where(f"Here are the top {len(items)} items in the list")
+    [to_where(blocks=blocks) for blocks in blocks.get_items_displayblocks(items_metadata=items)]
 
-@app.message("buttons")
+#@app.message("TEST buttons")
 def _TEST_show_buttons(say, message):
 
     say(text = "showing a butt load of buttons", blocks=blocks._TEST_get_random_buttons())
@@ -58,6 +74,8 @@ def _TEST_random_action_function(ack, payload, action, body, message, say):
     ack()
     say("Wah gwaan man!")    
     print(json.dumps([payload, action, body]),",\n")
+
+
     
 
 
